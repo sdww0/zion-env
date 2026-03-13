@@ -1,5 +1,7 @@
 #! /bin/bash
 
+# In zion-kernel container:
+
 source utils/common.sh
 
 mkdir -p output 

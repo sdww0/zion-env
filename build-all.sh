@@ -1,17 +1,26 @@
 #! /bin/bash
 
-# In rockos-kernel container:
-
-source common.sh
+# In zion-kernel container:
 
 set -e
 
-podman run -it --name rockos-kernel -v .:/root rockos-kernel &
+podman run -it --name zion-kernel -v .:/root zion-kernel &
 
 sleep 3
 
-podman exec -it rockos-kernel bash ./utils/build-bootloader.sh
-podman exec -it rockos-kernel bash ./utils/build-kernel.sh
+podman exec -it zion-kernel bash ./utils/build-bootloader.sh
+podman exec -it zion-kernel bash ./utils/build-kernel.sh
 
-podman stop rockos-kernel
-podman rm rockos-kernel
+podman stop zion-kernel
+podman rm zion-kernel
+
+# In zion-qemu container:
+
+podman run -it --name zion-qemu -v .:/root zion-qemu &
+
+sleep 3
+
+podman exec -it zion-qemu bash ./utils/build-qemu.sh
+
+podman stop zion-qemu
+podman rm zion-qemu

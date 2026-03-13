@@ -13,16 +13,9 @@ else
     exit 0
 fi
 
-podman run -it --name zion-qemu -v .:/root zion-qemu &
-
-sleep 3
-
 set -e
 
 # QEMU
-podman exec -it zion-qemu bash -c '
-
-set -e
 
 mkdir -p /usr/local/qemu
 pushd qemu
@@ -33,9 +26,4 @@ make -j$(nproc)
 make install
 popd
 
-source utils/common.sh
 cp -r /usr/local/qemu ${OUTPUT_DIR}
-'
-
-podman stop zion-qemu
-podman rm zion-qemu

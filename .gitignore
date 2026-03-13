@@ -8,3 +8,12 @@ output
 *.o
 *.log
 .bash_history
+patch/
+tvm-driver/*.cmd
+tvm-driver/tvm-control
+tvm-driver/tvm-driver.ko
+tvm-driver/tvm-driver.mod
+tvm-driver/tvm-driver.mod.c
+tvm-driver/Module.symvers
+tvm-driver/modules.order
+tvm-driver.mod

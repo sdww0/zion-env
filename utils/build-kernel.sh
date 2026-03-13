@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# In rockos-kernel container:
+# In zion-kernel container:
 
 source utils/common.sh
 
