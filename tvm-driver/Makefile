@@ -19,4 +19,4 @@ tvm-driver:
 endif
 
 clean:
-	rm -rvf *.o *.ko *.order *.symvers *.mod.c .tmp_versions .*o.cmd tvm-control
+	rm -rvf *.o *.ko *.order *.symvers *.mod.c .tmp_versions .*.cmd tvm-control tvm-driver.mod
