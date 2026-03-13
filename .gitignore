@@ -1,0 +1,10 @@
+opensbi
+u-boot
+rootfs_ext4
+zion-guest
+zion-host
+qemu
+output
+*.o
+*.log
+.bash_history
