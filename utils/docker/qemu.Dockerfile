@@ -1,4 +1,4 @@
-FROM ubuntu:24.04
+FROM localhost/ubuntu:24.04-riscv
 
 ARG DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-c"]

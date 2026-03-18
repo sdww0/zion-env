@@ -17,3 +17,11 @@ tvm-driver/tvm-driver.mod.c
 tvm-driver/Module.symvers
 tvm-driver/modules.order
 tvm-driver.mod
+virt/initrd.img-6.6.87-win2030
+utils/env/initrd.img
+utils/docker/ubuntu-24.04-amd64.tar
+utils/docker/ubuntu-24.04-riscv.tar
+zion.zip
+virt/rootfs.ext4
+init.sh
+*.patch
