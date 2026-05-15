@@ -11,6 +11,8 @@
 set -e
 
 PASS_COMPILE=false
+ZION_CVM_SSH_PORT="${ZION_CVM_SSH_PORT:-10022}"
+ZION_OUTER_SSH_PORT="${ZION_OUTER_SSH_PORT:-10023}"
 
 if [ "$1" == "pass-compile" ]; then
     PASS_COMPILE=true
@@ -53,6 +55,11 @@ if [ "$PASS_COMPILE" = false ] ; then
     sudo cp ./utils/env/start_tvm_from_boot.sh $ZION_TESTS_DIR/start_tvm_from_boot.sh
     sudo cp ./utils/env/tee-sqlite.sh $ZION_TESTS_DIR/tee-sqlite.sh
     sudo cp ./utils/env/initrd.img $ZION_TESTS_DIR/initrd.img
+    sudo cp ./utils/env/start_tvm_ssh_from_boot.sh $ZION_TESTS_DIR/start_tvm_ssh_from_boot.sh
+    sudo cp ./utils/env/tee-ssh.sh $ZION_TESTS_DIR/tee-ssh.sh
+    if [ -f ./utils/env/initrd-ssh.img ]; then
+        sudo cp ./utils/env/initrd-ssh.img $ZION_TESTS_DIR/initrd-ssh.img
+    fi
 
     # umount
     sync
@@ -73,4 +80,6 @@ qemu-system-riscv64 -smp 1 -m 4G \
     -monitor chardev:mux \
     -append "console=ttyS0 rw swiotlb=force root=/dev/sda rootfstype=ext4 rootwait selinux=0 cma=1G" \
     -drive file=./rootfs.ext4,format=raw,if=none,id=hd0 \
-    -device virtio-scsi-device,id=scsi -device scsi-hd,drive=hd0
+    -device virtio-scsi-device,id=scsi -device scsi-hd,drive=hd0 \
+    -netdev user,id=net0,hostfwd=tcp:127.0.0.1:"$ZION_CVM_SSH_PORT"-:10022,hostfwd=tcp:127.0.0.1:"$ZION_OUTER_SSH_PORT"-:22 \
+    -device virtio-net-device,netdev=net0

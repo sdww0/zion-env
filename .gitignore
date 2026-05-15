@@ -19,6 +19,8 @@ tvm-driver/modules.order
 tvm-driver.mod
 virt/initrd.img-6.6.87-win2030
 utils/env/initrd.img
+utils/env/initrd-ssh.img
+utils/env/initramfs-ssh/
 utils/docker/ubuntu-24.04-amd64.tar
 utils/docker/ubuntu-24.04-riscv.tar
 zion.zip
