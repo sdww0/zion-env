@@ -93,7 +93,8 @@ ip -br addr show eth0 2>/dev/null || ifconfig eth0 2>/dev/null || true
 echo "Virtio block device status:"
 ls -l /dev/vd* 2>/dev/null || true
 
-/usr/sbin/dropbear -E -R -p 0.0.0.0:22
+SSHD_ADDR="${SSHD_ADDR:-10.0.2.15}"
+/usr/sbin/dropbear -E -R -p "$SSHD_ADDR:22"
 exec /bin/sh
 EOF
 chmod +x "$WORK_DIR/root/etc/zion-ssh.sh"
