@@ -45,9 +45,6 @@ Existing clean repositories are fetched and fast-forwarded. The script stops
 if a repository has tracked local changes or its local branch has diverged; it
 never resets local work. Untracked build outputs are left untouched.
 
-Zion changes are already present on these branches. Running `patch.sh` is no
-longer required.
-
 ## 2. Build the container images
 
 The source build uses separate amd64 kernel and riscv64 QEMU images:
