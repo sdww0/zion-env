@@ -1,26 +1,103 @@
-#! /bin/bash
+#!/usr/bin/env bash
 
-# In zion-kernel container:
+set -euo pipefail
 
-set -e
+readonly ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly KERNEL_IMAGE="${ZION_KERNEL_IMAGE:-localhost/zion-kernel:0.1.0}"
+readonly QEMU_IMAGE="${ZION_QEMU_IMAGE:-localhost/zion-qemu:0.1.0}"
 
-podman run -it --name zion-kernel -v .:/root zion-kernel &
+build_kernel=true
+build_qemu=true
 
-sleep 3
+usage()
+{
+	cat <<'EOF'
+Usage: ./build-all.sh [--all | --kernel | --qemu]
 
-podman exec -it zion-kernel bash ./utils/build-bootloader.sh
-podman exec -it zion-kernel bash ./utils/build-kernel.sh
+  --all      Build bootloader, host/guest kernels, TVM driver, and QEMU
+  --kernel   Build bootloader, host/guest kernels, and TVM driver only
+  --qemu     Build QEMU only
+  -h, --help Show this help
 
-podman stop zion-kernel
-podman rm zion-kernel
+Container images can be overridden with ZION_KERNEL_IMAGE and
+ZION_QEMU_IMAGE.
+EOF
+}
 
-# In zion-qemu container:
+case "${1:---all}" in
+	--all)
+		;;
+	--kernel)
+		build_qemu=false
+		;;
+	--qemu)
+		build_kernel=false
+		;;
+	-h|--help)
+		usage
+		exit 0
+		;;
+	*)
+		usage >&2
+		exit 2
+		;;
+esac
 
-podman run -it --name zion-qemu -v .:/root zion-qemu &
+if [ "$#" -gt 1 ]; then
+	usage >&2
+	exit 2
+fi
 
-sleep 3
+if ! command -v podman >/dev/null 2>&1; then
+	echo "error: podman is required" >&2
+	exit 1
+fi
 
-podman exec -it zion-qemu bash ./utils/build-qemu.sh
+require_repo()
+{
+	if [ ! -d "${ROOT_DIR}/$1/.git" ]; then
+		echo "error: missing source repository: $1" >&2
+		echo "run ./download.sh first" >&2
+		exit 1
+	fi
+}
 
-podman stop zion-qemu
-podman rm zion-qemu
+require_image()
+{
+	if ! podman image exists "$1"; then
+		echo "error: missing container image: $1" >&2
+		echo "build the images with: (cd utils/docker && ./docker-build.sh)" >&2
+		exit 1
+	fi
+}
+
+if $build_kernel; then
+	require_repo opensbi
+	require_repo u-boot
+	require_repo zion-host
+	require_repo zion-guest
+	require_image "$KERNEL_IMAGE"
+
+	echo "==> Building bootloader, kernels, and TVM driver"
+	podman run --rm \
+		--platform linux/amd64 \
+		--volume "${ROOT_DIR}:/root" \
+		--workdir /root \
+		"$KERNEL_IMAGE" \
+		bash -euc $'bash ./utils/build-bootloader.sh\nbash ./utils/build-kernel.sh'
+fi
+
+if $build_qemu; then
+	require_repo qemu
+	require_image "$QEMU_IMAGE"
+
+	echo "==> Building QEMU"
+	podman run --rm \
+		--platform linux/riscv64 \
+		--volume "${ROOT_DIR}:/root" \
+		--workdir /root \
+		"$QEMU_IMAGE" \
+		bash ./utils/build-qemu.sh
+fi
+
+echo "==> Build complete; artifacts are under ${ROOT_DIR}/output"

@@ -1,14 +1,15 @@
 #! /bin/bash
 
-pushd opensbi
-git apply ../patch/opensbi/*.patch
-popd
+set -euo pipefail
 
-pushd qemu
-git apply ../patch/qemu/*.patch
-popd
+cat <<'MSG'
+patch.sh is deprecated: no local patch application is required.
 
-pushd zion-host
-git apply ../patch/zion-host/*.patch
-popd
+Zion component changes are maintained on their public Git branches. Run:
 
+  ./download.sh
+
+Then build the stack separately with:
+
+  ./build-all.sh
+MSG
