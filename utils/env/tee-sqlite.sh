@@ -2,6 +2,7 @@
 
 /usr/local/qemu/bin/qemu-system-riscv64 -m 512M \
     --enable-kvm \
+    -zion-cvm \
     -cpu rv64 \
     -nographic \
     -machine virt \

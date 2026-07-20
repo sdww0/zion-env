@@ -30,6 +30,7 @@ fi
 qemu_args=(
 	-m "$ASTER_MEM"
 	--enable-kvm
+	-zion-cvm
 	-cpu rv64,svpbmt=true
 	-machine virt
 	-smp "$ASTER_SMP"
