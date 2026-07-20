@@ -63,6 +63,11 @@ The default image names are:
 - `localhost/zion-kernel:0.1.0`
 - `localhost/zion-qemu:0.1.0`
 
+The image builder first pulls the amd64 and riscv64 Ubuntu base images from
+the registry. If a pull fails, it falls back to the matching
+`ubuntu-24.04-*.tar` archive in `utils/docker/`, which keeps offline builds
+available.
+
 ## 3. Build Zion
 
 Build the complete stack with a separate one-shot command:
