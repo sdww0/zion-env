@@ -71,7 +71,7 @@ fi
 qemu-system-riscv64 -smp 1 -m 4G \
     -nographic \
     -machine virt \
-    -cpu rv64,pmp=true,pmp-granularity=4096,sv48=true,svpbmt=true \
+    -cpu rv64,pmp=true,pmp-granularity=4096,sv48=true,svpbmt=true,sstc=false \
     -bios ../output/fw_dynamic-qemu.bin \
     -kernel ../output/host_kernel_image \
     -initrd ./initrd.img-6.6.87-win2030 \
