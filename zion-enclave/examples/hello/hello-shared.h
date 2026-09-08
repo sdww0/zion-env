@@ -1,0 +1,6 @@
+#ifndef ZION_HELLO_SHARED_H
+#define ZION_HELLO_SHARED_H
+
+#define HELLO_OCALL_PRINT 0
+
+#endif

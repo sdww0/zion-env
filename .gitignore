@@ -27,3 +27,4 @@ zion.zip
 virt/rootfs.ext4
 init.sh
 *.patch
+zion-new/
