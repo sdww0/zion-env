@@ -58,6 +58,14 @@ grep -aFq '[ZION VCPU ALERT]' "$FIRMWARE" || {
     echo 'Full three-test release requires the new Zion Megrez firmware.' >&2
     exit 1
 }
+grep -aFq '[SM] private split block failed:' "$FIRMWARE" || {
+    echo 'Asterinas release requires the Zion split private-block firmware fix.' >&2
+    exit 1
+}
+grep -aFq '[SM] fatal: unhandled monitor trap: hart=' "$FIRMWARE" || {
+    echo 'Release firmware is missing detailed Zion trap diagnostics.' >&2
+    exit 1
+}
 install -d "$DEST/boot-partition" "$DEST/root-partition/root/zion-tests" "$DEST/identity" "$DEST/docs"
 RUNTIME=$DEST/root-partition/root/zion-tests
 install -m 644 "$FIRMWARE" "$DEST/boot-partition/bootloader_secboot_ddr5_milkv_megrez.bin"
