@@ -4,6 +4,7 @@
 
 ## 说明书
 
+- [一次启动测试流程](QUICK_TEST_ZH.md)：从刚重启的 Host 开始，按命令顺序完成全部测试。
 - [部署手册](docs/DEPLOYMENT_ZH.md)：SD 卡导入、备份及 Host 初始化。
 - [测试手册](docs/TESTS_ZH.md)：测试操作、预期输出、判定条件和日志位置。
 - [输出与通过依据](docs/EVIDENCE_ZH.md)：输出来源、对应检查和证据范围。
@@ -29,14 +30,14 @@ virtio 网络、块设备及 SQLite；CVM 内 enclave 目前只支持 Linux Gues
 
 ## 测试项目
 
-1. Host 受控篡改 vCPU 共享通道，Zion 检测并输出一次性告警。
-2. Linux 或 Asterinas CVM 使用 virtio 网络和共享数据交换路径，可从 Host
+1. Host 对本轮实际预留的受保护物理内存发起越权读取，SM 拦截后
+   Linux 异常表恢复执行，Host 不重启。
+2. Host 受控篡改 vCPU 共享通道，Zion 检测并输出一次性告警。
+3. Linux 或 Asterinas CVM 使用 virtio 网络和共享数据交换路径，可从 Host
    SSH 连接，并通过 virtio-blk 实际读取块设备。
-3. Linux CVM 内创建并执行 enclave，进行 10 轮计算/OCALL 校验、销毁及
+4. Linux CVM 内创建并执行 enclave，进行 10 轮计算/OCALL 校验、销毁及
    驱动负向测试；Asterinas 暂不支持此项。
-4. Linux 或 Asterinas CVM 运行 `sqlite-speedtest1 --size 10 --memdb`。
-5. Host 对预留的受保护物理内存发起越权读取，观察 Zion SM 拦截记录。
-   此项单独重启 Host 后执行，可能导致 Host 异常或停机。
+5. Linux 或 Asterinas CVM 运行 `sqlite-speedtest1 --size 10 --memdb`。
 
 Host：`6.6.87-win2030`；Guest：`6.6.88+`。资源和端口配置在
 `megrez-runtime.conf`，运行日志、PID 和测试磁盘位于 `state/`。

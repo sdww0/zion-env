@@ -36,12 +36,44 @@ fi
 case "$mode" in
     init)
         [ "$(id -u)" = 0 ] || { echo 'Run init as root' >&2; exit 1; }
+        mkdir -p state
         if [ -e /dev/tvm ]; then
             echo 'Driver already loaded; pool state is unknown. Do not reserve twice.' >&2
             exit 1
         fi
         insmod ./tvm-driver.ko
         ./tvm-control tvm "$POOL_PAGES"
+        addr=$(dmesg | sed -n 's/.*device_phys_addr=\([0-9a-fA-F]*\).*/0x\1/p' | tail -n 1)
+        case "$addr" in
+            0x[0-9a-fA-F]*) ;;
+            *) echo 'Cannot find the reserved pool physical address in dmesg' >&2; exit 1 ;;
+        esac
+        printf '%s\n' "$addr" > state/protected-addr
+        echo "Trusted pool ready: address=$addr pages=$POOL_PAGES"
+        ;;
+    protect)
+        [ -e /dev/tvm ] || { echo 'Run init first' >&2; exit 1; }
+        [ -s state/protected-addr ] || {
+            echo 'Missing state/protected-addr; do not guess a physical address' >&2
+            exit 1
+        }
+        read -r addr < state/protected-addr
+        before=$(dmesg | wc -l)
+        set +e
+        ./tvm-control phys_memory_access 0 "$addr"
+        rc=$?
+        set -e
+        new_log=$(dmesg | tail -n "+$((before + 1))")
+        if [ "$rc" -eq 0 ]; then
+            echo "[ZION MEMORY] FAIL: host read returned successfully for $addr" >&2
+            exit 1
+        fi
+        printf '%s\n' "$new_log" | grep -F 'protected-memory read blocked:' >/dev/null || {
+            echo '[ZION MEMORY] FAIL: access failed without the recovered-fault marker' >&2
+            exit 1
+        }
+        echo "[ZION MEMORY] PASS: host read of $addr was blocked and recovered"
+        echo 'Confirm the matching [SM] TEE security check lines on the physical console.'
         ;;
     linux|enclave|asterinas)
         mkdir -p state
@@ -91,11 +123,40 @@ case "$mode" in
             echo 'Guest: /usr/bin/run-zion-enclave-demo (same boot)'
         fi
         ;;
+    stop)
+        [ -s state/cvm.pid ] || { echo 'No recorded CVM PID' >&2; exit 1; }
+        read -r pid < state/cvm.pid
+        kill -0 "$pid" 2>/dev/null || {
+            echo "Recorded CVM PID $pid is not running" >&2
+            rm -f state/cvm.pid
+            exit 1
+        }
+        args=$(ps -p "$pid" -o args=)
+        case "$args" in
+            *"$(pwd)/qemu-system-riscv64"*|*"./qemu-system-riscv64"*) ;;
+            *) echo "Refusing to stop unexpected PID $pid: $args" >&2; exit 1 ;;
+        esac
+        kill "$pid"
+        wait_count=0
+        while kill -0 "$pid" 2>/dev/null && [ "$wait_count" -lt 20 ]; do
+            sleep 1
+            wait_count=$((wait_count + 1))
+        done
+        kill -0 "$pid" 2>/dev/null && {
+            echo "CVM PID $pid did not stop" >&2
+            exit 1
+        }
+        guest=$(cat state/guest-system 2>/dev/null || printf unknown)
+        log="state/${guest}-$(date +%Y%m%d-%H%M%S).log"
+        [ ! -f state/cvm.log ] || cp state/cvm.log "$log"
+        rm -f state/cvm.pid
+        echo "CVM stopped; log: $log"
+        ;;
     status)
         tail -n 60 state/cvm.log
         ;;
     *)
-        echo "Usage: $0 select [linux|asterinas]|init|guest|linux|enclave|asterinas|status"
+        echo "Usage: $0 select [linux|asterinas]|init|protect|guest|linux|enclave|asterinas|status|stop"
         echo 'Initialize once per Host boot. Stop the CVM using its verified QEMU PID in state/cvm.pid.'
         [ "$mode" = help ] || exit 2
         ;;

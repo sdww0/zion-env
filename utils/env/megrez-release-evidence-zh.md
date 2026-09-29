@@ -78,15 +78,17 @@ Asterinas。Linux enclave 通过不能外推为 Asterinas enclave 支持。
 | `device_phys_addr=...` | tvm-driver 预留接口，Host 日志 | 本轮预留内存的物理基地址；不是虚拟地址 |
 | `reserve TVM SBI result: error=0` | tvm-driver 的 SBI 返回值 | SM 已接受该物理区间；非零时不得把同轮地址当作保护区 |
 | `Access the physical memory: ... physical address = ...` | tvm-driver 访问探针，Host 日志 | 实际尝试读取的物理地址，须落入本轮受保护区域 |
+| `protected-memory read blocked: ... fault=-14 (recovered)` | tvm-driver 的 no-fault 读取路径，Host dmesg | Linux 异常表捕获了被 SM 转发的 access fault，测试进程可控返回 |
+| `[ZION MEMORY] PASS: ... was blocked and recovered` | `zion-runtime.sh protect`，Host 终端 | 探针非零退出、recovered 标记存在，且脚本继续执行 |
 | `TEE security check: ... r/w the protected region` 及地址/异常上下文 | OpenSBI `tee-mem.c`，物理串口 | 对受保护区域的访问进入 SM 安全检查路径 |
 
 **通过条件：**预留成功、探针目标与本轮保护区域相符、同次访问有 SM
-拦截记录，且没有驱动成功读取后的 `Access the physical memory: value=...`。
-仅有权限数字、映射失败、Host 崩溃或缺少输出不能证明通过。
+拦截记录、驱动打印 recovered fault，脚本打印 `PASS`，Host/SSH 仍可继续执行，
+且没有成功读取后的 `Access the physical memory: value=...`。仅有权限数字、
+映射失败、Host 崩溃或缺少输出不能证明通过。
 
-探针使用 `READ_ONCE` 读取，不执行写入。此项验证本次越权读取被拦截，
-不单独证明写保护、所有地址隔离或无信息泄露；Host 异常可能是该探针的
-后果，不要求本项访问后系统继续运行。独立重启后测试并保存串口记录。
+探针使用 `copy_from_kernel_nofault()` 读取，不执行写入。此项只验证
+本次越权读取被拦截，不单独证明写保护、所有地址隔离或无信息泄露。
 
 ## 日志与范围
 

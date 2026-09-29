@@ -41,7 +41,33 @@ init_exit=0
 是否预留成功；`/dev/tvm` 存在不代表池已建立。状态不明时查日志或重启
 Host 后重新初始化，不要反复执行 reserve。
 
-## 1. 选择 Guest 系统
+## 1. 受保护物理内存：Host 越权读取
+
+`init` 已保存本轮成功预留的真实物理基地址。启动 CVM 前执行：
+
+```sh
+sh ./zion-runtime.sh protect
+```
+
+预期 Host 输出：
+
+```text
+RTVM_IOC_CVM_PHYS_MEMORY_ACCESS: Permission denied
+[ZION MEMORY] PASS: host read of 0x... was blocked and recovered
+```
+
+驱动使用 Linux `copy_from_kernel_nofault()` 异常表恢复路径，所以该测试
+不应再导致 Host panic。物理串口必须同时出现：
+
+```text
+[SM] TEE security check: the hypervisor is trying to r/w the protected region
+```
+
+通过条件：SBI 预留为 `error=0`，探针使用 `state/protected-addr`中的
+本轮基地址，命令打印 `PASS` 且 Host/SSH 继续可用，串口有同次 SM
+拦截记录。不要重复执行 `init`，后续 CVM 直接使用同一可信内存池。
+
+## 2. 选择 Guest 系统
 
 每轮公共 Guest 测试开始前选择 Linux 或 Asterinas：
 
@@ -62,7 +88,7 @@ enclave frontend 当前依赖 Linux Guest 的 `/dev/zion_enclave` 驱动，因�
 enclave 项必须使用 Linux，不属于 Asterinas 的通过条件。显式命令
 `sh ./zion-runtime.sh linux` 和 `sh ./zion-runtime.sh asterinas` 继续保留。
 
-## 2. vCPU 保护：受控 Host 篡改与 Zion 检测
+## 3. vCPU 保护：受控 Host 篡改与 Zion 检测
 
 物理串口的启动记录应有 ZION ASCII logo、OpenSBI 版本及：
 
@@ -110,7 +136,7 @@ cat /sys/module/kvm/parameters/zion_vcpu_tamper
 
 通过条件：两端记录均为 S3=`0x5a494f4e`、参数归零，随后第二项通过。
 
-## 3. 共享内存：virtio 网络与块设备
+## 4. 共享内存：virtio 网络与块设备
 
 上一项已经启动所选 CVM 时，不要重复启动；未启动时在 Host 执行：
 
@@ -177,7 +203,7 @@ blk_read_exit=0
 通过条件：SSH 命令执行成功、`blk_read_exit=0`、读取长度为 512。
 测试磁盘为 Host `state/virtio-blk.img`（64 MiB）。
 
-## 4. SQLite
+## 5. SQLite
 
 保持所选 Linux 或 Asterinas CVM 运行，在 Guest SSH 会话中执行：
 
@@ -196,7 +222,7 @@ sqlite_exit=0
 通过条件：实际工作负载完整执行且退出码为零。数据库位于内存中，本项不验证
 块设备文件系统或持久化。
 
-## 5. CVM 与 enclave 融合（仅 Linux Guest）
+## 6. CVM 与 enclave 融合（仅 Linux Guest）
 
 选择 Linux 时可保持同一个 CVM 和 SSH 会话，直接执行下述测试。选择
 Asterinas 时，先按下一节步骤停止 CVM、保存日志，再启动 Linux：
@@ -246,7 +272,13 @@ pid=$(cat state/cvm.pid)
 ps -p "$pid" -o pid,args
 ```
 
-确认属于本目录启动的 Zion QEMU 后：
+确认属于本目录启动的 Zion QEMU 后，优先使用：
+
+```sh
+sh ./zion-runtime.sh stop
+```
+
+如果需要手工核查：
 
 ```sh
 kill "$pid"
@@ -260,67 +292,6 @@ cp state/cvm.log "state/${guest}-$(date +%Y%m%d-%H%M%S).log"
 执行 `init`，下一次启动可能覆盖 `state/cvm.log`，因此先保存日志。
 
 切换系统时不重复执行 `init`；重新运行 `select`，再执行 `guest`。
-
-## 6. 受保护物理内存：Host 越权读取
-
-先保存前四项日志，再重启板卡。本项独立执行，不启动 CVM，不执行
-`zion-runtime.sh init`；访问异常可能使 Host Oops、panic 或停机，提前开启
-物理串口日志采集。系统无响应本身不是通过依据。
-
-进入 Host root 终端：
-
-```sh
-cd /root/zion-tests
-insmod ./tvm-driver.ko
-./tvm-control tvm 65535
-```
-
-本轮预留 65535 个 4 KiB 页（约 256 MiB），记录驱动输出：
-
-```text
-[tvm-control] type=tvm, count=0xffff
-ioctl(): RTVM_IOC_RESERVE_TVM_MEM
-[tvm-driver] rtvm_reserve_tvm_mem(): ... device_phys_addr=...
-[tvm-driver] reserve TVM SBI result: error=0, value=0
-```
-
-必须确认 SBI 结果为 `error=0`且命令退出码为零。任何非零
-`error`、`Operation already in progress` 或非零退出码都表示本轮地址没有被 SM
-接受，禁止继续访问。取本轮成功输出的物理基地址
-`device_phys_addr`，不要使用虚拟地址 `vaddr`，不要沿用其他启动的地址。
-执行 `read` 后，输入该地址（含 `0x`）并回车：
-
-```sh
-read -r addr
-./tvm-control phys_memory_access 0 "$addr"
-```
-
-例如只有本轮实际基地址为 `0xa2400000` 时，才输入 `0xa2400000`。
-不自行添加偏移；当前探针的页内偏移计算有误，使用本轮基地址前需确认
-其为 8 KiB 对齐（最低 13 位为零），使探针偏移为零。不满足时不要使用
-当前探针，先修复驱动并重建；基地址不要求 2 MiB 对齐。
-
-Host 驱动应记录实际尝试访问的物理地址。物理串口预期出现：
-
-```text
-[SM] TEE security check: the hypervisor is trying to r/w the protected region
-```
-
-此提示在新版 OpenSBI 中使用普通打印。当前发布包的 Megrez bootloader
-尚未包含此次打印修改；旧固件的非 debug 构建可能只出现 Host 访问异常。
-需更新对应 OpenSBI 固件后才能按完整 SM 日志判定；本次修改只在 QEMU
-重新构建的固件中验证，未进行板端启动验证。
-
-结合同轮 SM 的物理地址/异常信息，确认访问命中本次预留区域。辅助的
-权限数字（如旧版本 `permission e7`）不是固定输出，不要求逐字匹配。
-成功读取后的驱动日志 `Access the physical memory: value=...` 不应出现；
-若出现，应判为失败并检查目标地址及保护配置。`memremap failed` 而没有
-SM 拦截记录也不能计为通过。
-
-通过条件：预留成功、实际探针地址位于受保护区域、SM 记录该次访问
-被保护检查捕获，且探针未成功返回读取值。保留完整串口上下文，测试后
-重启板卡再进行其他测试。本项只验证受测地址的越权读取拦截；未执行写入
-测试，也不据此宣称系统仍正常运行或所有受保护数据均无泄露。
 
 ## 日志与结果表
 
