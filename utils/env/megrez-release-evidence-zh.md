@@ -76,6 +76,7 @@ Asterinas。Linux enclave 通过不能外推为 Asterinas enclave 支持。
 | 关键输出 | 来源与位置 | 实际检查 |
 | --- | --- | --- |
 | `device_phys_addr=...` | tvm-driver 预留接口，Host 日志 | 本轮预留内存的物理基地址；不是虚拟地址 |
+| `reserve TVM SBI result: error=0` | tvm-driver 的 SBI 返回值 | SM 已接受该物理区间；非零时不得把同轮地址当作保护区 |
 | `Access the physical memory: ... physical address = ...` | tvm-driver 访问探针，Host 日志 | 实际尝试读取的物理地址，须落入本轮受保护区域 |
 | `TEE security check: ... r/w the protected region` 及地址/异常上下文 | OpenSBI `tee-mem.c`，物理串口 | 对受保护区域的访问进入 SM 安全检查路径 |
 

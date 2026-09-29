@@ -37,6 +37,8 @@ if [[ -n "$INPUT" ]]; then
         ASTER_INITRD=${MEGREZ_ASTER_INITRD:-$INPUT_RUNTIME/initrd-asterinas.img}
     fi
 fi
+TVM_DRIVER=${MEGREZ_TVM_DRIVER:-$TVM_DRIVER}
+TVM_CONTROL=${MEGREZ_TVM_CONTROL:-$TVM_CONTROL}
 LINUX_INITRD=${MEGREZ_LINUX_INITRD:-$LINUX_INITRD}
 if [[ -n "$FIRMWARE_BUILD" ]]; then
     FIRMWARE=$FIRMWARE_BUILD/firmware/bootloader_secboot_ddr5_milkv_megrez.bin

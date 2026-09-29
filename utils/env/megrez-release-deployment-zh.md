@@ -107,8 +107,9 @@ printf 'init_exit=%s\n' "$rc"
 ls /dev/tvm
 ```
 
-成功应有 `RTVM_IOC_RESERVE_TVM_MEM`、`device_phys_addr=...`，且
-`init_exit=0`，没有 `test_tvm failed`。不能仅凭退出码或 `/dev/tvm` 判断成功。
+成功应有 `RTVM_IOC_RESERVE_TVM_MEM`、`device_phys_addr=...`、
+`reserve TVM SBI result: error=0`，且 `init_exit=0`。不能仅凭
+`/dev/tvm` 存在判断成功。
 每次 Host 启动只初始化一次，切换 CVM 模式不重复初始化。
 
 先选择本轮 Guest：

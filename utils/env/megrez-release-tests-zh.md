@@ -32,12 +32,12 @@ ls /dev/tvm
 [tvm-control] type=tvm, count=0x30d40
 ioctl(): RTVM_IOC_RESERVE_TVM_MEM
 [tvm-driver] rtvm_reserve_tvm_mem(): ... device_phys_addr=...
+[tvm-driver] reserve TVM SBI result: error=0, value=0
 init_exit=0
 ```
 
 脚本加载 `tvm-driver.ko`，再按配置预留 200000 个 4 KiB 页（约 781 MiB）。
-退出码应为零且有内存预留记录，不能出现 `test_tvm failed`。当前控制程序
-在部分 ioctl 失败情况下仍返回零，不能只看退出码。若提示驱动已加载，先确认此前
+退出码应为零，且 SBI 结果必须为 `error=0`。若提示驱动已加载，先确认此前
 是否预留成功；`/dev/tvm` 存在不代表池已建立。状态不明时查日志或重启
 Host 后重新初始化，不要反复执行 reserve。
 
@@ -281,9 +281,12 @@ insmod ./tvm-driver.ko
 [tvm-control] type=tvm, count=0xffff
 ioctl(): RTVM_IOC_RESERVE_TVM_MEM
 [tvm-driver] rtvm_reserve_tvm_mem(): ... device_phys_addr=...
+[tvm-driver] reserve TVM SBI result: error=0, value=0
 ```
 
-必须确认预留成功、没有 `test_tvm failed`。取本轮输出的物理基地址
+必须确认 SBI 结果为 `error=0`且命令退出码为零。任何非零
+`error`、`Operation already in progress` 或非零退出码都表示本轮地址没有被 SM
+接受，禁止继续访问。取本轮成功输出的物理基地址
 `device_phys_addr`，不要使用虚拟地址 `vaddr`，不要沿用其他启动的地址。
 执行 `read` 后，输入该地址（含 `0x`）并回车：
 
