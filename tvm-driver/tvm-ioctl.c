@@ -4,14 +4,25 @@
 #include <asm/page.h>
 #include <linux/highmem.h>
 #include <linux/io.h>
+#include <linux/mutex.h>
 
 #include "tvm.h"
 #include "tvm_user.h"
 
-void rtvm_reserve_tvm_mem(unsigned long count) // 请求分配的页数量
+static DEFINE_MUTEX(reserve_lock);
+static bool secure_pool_reserved;
+
+long rtvm_reserve_tvm_mem(unsigned long count) // 请求分配的页数量
 {
+    long result = 0;
     vaddr_t vaddr = 0;
     phys_addr_t device_phys_addr = 0;
+
+    mutex_lock(&reserve_lock);
+    if (secure_pool_reserved) {
+        result = -EALREADY;
+        goto out;
+    }
     // unsigned long count = min_pages;
     vaddr = (vaddr_t)dma_alloc_coherent(tvm_dev.this_device,
                                         count << PAGE_SHIFT,
@@ -19,21 +30,40 @@ void rtvm_reserve_tvm_mem(unsigned long count) // 请求分配的页数量
                                         GFP_KERNEL | __GFP_DMA32);
 
     pr_info("[tvm-driver] rtvm_reserve_tvm_mem(): vaddr=%lx, device_phys_addr=%llx\n", vaddr, device_phys_addr);
-    if (device_phys_addr != 0)
-    {
-        struct sbiret ret = sbi_ecall(TVM_SBI_EXT_ID, 1014,
-                                      0, (unsigned long)device_phys_addr, count, 0, 0, 0);
-    }
-    else
-    {
+    if (!vaddr || device_phys_addr == 0) {
         pr_info("[tvm-driver] !!!ERROR!!! device_phys_addr is 0.\n");
+        result = -ENOMEM;
+        goto out;
     }
+
+    struct sbiret ret = sbi_ecall(TVM_SBI_EXT_ID, 1014,
+                                  0, (unsigned long)device_phys_addr, count, 0, 0, 0);
+    pr_info("[tvm-driver] reserve TVM SBI result: error=%ld, value=%ld\n",
+            ret.error, ret.value);
+    if (ret.error) {
+        dma_free_coherent(tvm_dev.this_device, count << PAGE_SHIFT,
+                          (void *)vaddr, device_phys_addr);
+        result = ret.error;
+        goto out;
+    }
+
+    secure_pool_reserved = true;
+out:
+    mutex_unlock(&reserve_lock);
+    return result;
 }
 
-void rtvm_reserve_enclave_mem(unsigned long count)
+long rtvm_reserve_enclave_mem(unsigned long count)
 {
+    long result = 0;
     vaddr_t vaddr = 0;
     phys_addr_t device_phys_addr = 0;
+
+    mutex_lock(&reserve_lock);
+    if (secure_pool_reserved) {
+        result = -EALREADY;
+        goto out;
+    }
     // unsigned long count = min_pages;
     // unsigned long count = 1024 * 256;
     vaddr = (vaddr_t)dma_alloc_coherent(tvm_dev.this_device,
@@ -42,15 +72,27 @@ void rtvm_reserve_enclave_mem(unsigned long count)
                                         GFP_KERNEL | __GFP_DMA32);
 
     pr_info("[tvm-driver] rtvm_reserve_enclave_mem(): vaddr=%lx, device_phys_addr=%llx\n", vaddr, device_phys_addr);
-    if (device_phys_addr != 0)
-    {
-        struct sbiret ret = sbi_ecall(TVM_SBI_EXT_ID, 1014,
-                                      1, (unsigned long)device_phys_addr, count, 0, 0, 0);
-    }
-    else
-    {
+    if (!vaddr || device_phys_addr == 0) {
         pr_info("[tvm-driver] !!!ERROR!!! device_phys_addr is 0.\n");
+        result = -ENOMEM;
+        goto out;
     }
+
+    struct sbiret ret = sbi_ecall(TVM_SBI_EXT_ID, 1014,
+                                  1, (unsigned long)device_phys_addr, count, 0, 0, 0);
+    pr_info("[tvm-driver] reserve enclave SBI result: error=%ld, value=%ld\n",
+            ret.error, ret.value);
+    if (ret.error) {
+        dma_free_coherent(tvm_dev.this_device, count << PAGE_SHIFT,
+                          (void *)vaddr, device_phys_addr);
+        result = ret.error;
+        goto out;
+    }
+
+    secure_pool_reserved = true;
+out:
+    mutex_unlock(&reserve_lock);
+    return result;
 }
 
 void rtvm_cycle_begin(void)
@@ -151,7 +193,7 @@ void rtvm_cvm_phys_memory_modify(unsigned long base_address)
 
 long tvm_ioctl(struct file *filep, unsigned int cmd, unsigned long count)
 {
-    long ret;
+    long ret = 0;
     //   char data[512];
 
     //   size_t ioc_size;
@@ -169,12 +211,12 @@ long tvm_ioctl(struct file *filep, unsigned int cmd, unsigned long count)
     {
     case RTVM_IOC_RESERVE_TVM_MEM:
         pr_info("[tvm-driver] RTVM_IOC_RESERVE_TVM_MEM, count=0x%lx\n", count);
-        rtvm_reserve_tvm_mem(count);
+        ret = rtvm_reserve_tvm_mem(count);
         // ret = keystone_create_enclave(filep, (unsigned long) data);
         break;
     case RTVM_IOC_RESERVE_ENCLAVE_MEM:
         pr_info("[tvm-driver] RTVM_IOC_RESERVE_ENCLAVE_MEM, count=0x%lx\n", count);
-        rtvm_reserve_enclave_mem(count);
+        ret = rtvm_reserve_enclave_mem(count);
         // ret = keystone_create_enclave(filep, (unsigned long) data);
         break;
     case RTVM_IOC_CYCLE_BEGIN:
@@ -213,6 +255,5 @@ long tvm_ioctl(struct file *filep, unsigned int cmd, unsigned long count)
 
     //   if (copy_to_user((void __user*) arg, data, ioc_size))
     //     return -EFAULT;
-    ret = 0;
     return ret;
 }

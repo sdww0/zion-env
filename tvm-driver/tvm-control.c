@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "tvm_user.h"
 
@@ -41,7 +42,9 @@ int main(int argc, char **argv)
         printf("ioctl(): RTVM_IOC_RESERVE_TVM_MEM\n");
         if (ioctl(fd, RTVM_IOC_RESERVE_TVM_MEM, count))
         {
-            printf("test_tvm failed\n");
+            perror("RTVM_IOC_RESERVE_TVM_MEM");
+            close(fd);
+            return 1;
         }
     }
     else if (!strcmp(type, "enclave"))
@@ -49,7 +52,9 @@ int main(int argc, char **argv)
         printf("ioctl(): RTVM_IOC_RESERVE_ENCLAVE_MEM\n");
         if (ioctl(fd, RTVM_IOC_RESERVE_ENCLAVE_MEM, count))
         {
-            printf("test_tvm failed\n");
+            perror("RTVM_IOC_RESERVE_ENCLAVE_MEM");
+            close(fd);
+            return 1;
         }
     }
     else if (!strcmp(type, "cycle_begin"))
