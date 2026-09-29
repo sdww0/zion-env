@@ -107,7 +107,9 @@ int main(int argc, char **argv)
         printf("ioctl(): phys_memory_access\n");
         if (ioctl(fd, RTVM_IOC_CVM_PHYS_MEMORY_ACCESS, address))
         {
-            printf("test_tvm failed\n");
+            perror("RTVM_IOC_CVM_PHYS_MEMORY_ACCESS");
+            close(fd);
+            return 1;
         }
     }else if (!strcmp(type, "phys_memory_modify"))
     {

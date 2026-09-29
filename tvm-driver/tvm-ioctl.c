@@ -117,8 +117,6 @@ void potara_clean_sec_mem(void)
                                       0, 0, 0, 0, 0, 0);
 }
 
-#define PAGE_SIZE 4096
-
 void rtvm_page_region_access(unsigned long base_address)
 {
     unsigned long access_address = base_address + PAGE_SIZE;
@@ -144,40 +142,39 @@ void rtvm_cvm_private_memory_access(unsigned long base_address)
     pr_info("[tvm-driver] Access the private memory: value=0x%lx\n", value);
 }
 
-void rtvm_cvm_phys_memory_access(unsigned long long base_address)
+long rtvm_cvm_phys_memory_access(unsigned long long base_address)
 {
-    // 1. 获取页对齐的物理基址和页内偏移
     phys_addr_t phys_page = base_address & ~0xFFFULL;
-    unsigned long long offset = base_address & PAGE_SIZE; 
-    
-    // 2. 关键修改：使用 memremap 替代 ioremap
-    // MEMREMAP_WB 表示使用 Write-Back (可缓存) 模式，这会绕过底层的 I/O 地址转换
+    unsigned long long offset = base_address & (PAGE_SIZE - 1);
+    unsigned int value;
+    long ret;
     void *access_address = memremap(phys_page, PAGE_SIZE, MEMREMAP_WB);
-    pr_info("[tvm-driver] Access the physical memory: access_address=0x%px, physical page=0x%llx, offset=0x%lx\n", 
+
+    pr_info("[tvm-driver] Access the physical memory: access_address=0x%px, physical page=0x%llx, offset=0x%llx\n",
             access_address, (unsigned long long)phys_page, offset);
     if (!access_address) {
         pr_err("[tvm-driver] memremap failed for paddr 0x%llx\n", (unsigned long long)phys_page);
-        return;
+        return -ENOMEM;
     }
 
-    
-    // 3. 计算最终的虚拟地址
-    // 注意：这里不再使用 __iomem 注解，因为它现在被视为普通内存
     void *address = access_address + offset;
-    
-    pr_info("[tvm-driver] Access the physical memory: address=0x%px, physical address = 0x%lx\n", 
+
+    pr_info("[tvm-driver] Access the physical memory: address=0x%px, physical address=0x%llx\n",
             address, base_address);
-
     pr_info("[tvm-driver] SATP: %lx", csr_read(satp));
-    
-    // 4. 关键修改：既然映射成了普通内存，就不该再用 ioread32()
-    // 直接用指针解引用即可。为了防止编译器优化掉这次读取，推荐使用 READ_ONCE()
-    unsigned int value = READ_ONCE(*(unsigned int *)address);
-    
-    pr_info("[tvm-driver] Access the physical memory: value=0x%x\n", value);
 
-    // 5. 别忘了使用配套的 unmap 函数释放映射
+    /* A protected address is expected to fault. Use the kernel exception
+     * table so this deliberate probe does not panic the host kernel. */
+    ret = copy_from_kernel_nofault(&value, address, sizeof(value));
     memunmap(access_address);
+    if (ret) {
+        pr_notice("[tvm-driver] protected-memory read blocked: physical address=0x%llx, fault=%ld (recovered)\n",
+                  base_address, ret);
+        return -EACCES;
+    }
+
+    pr_info("[tvm-driver] Access the physical memory: value=0x%x\n", value);
+    return 0;
 }
 
 void rtvm_cvm_phys_memory_modify(unsigned long base_address)
@@ -243,7 +240,7 @@ long tvm_ioctl(struct file *filep, unsigned int cmd, unsigned long count)
         break;
     case RTVM_IOC_CVM_PHYS_MEMORY_ACCESS:
         pr_info("[tvm-driver] RTVM_IOC_CVM_PHYS_MEMORY_ACCESS, base_address=0x%lx\n", count);
-        rtvm_cvm_phys_memory_access(count);
+        ret = rtvm_cvm_phys_memory_access(count);
         break;
     case RTVM_IOC_CVM_PHYS_MEMORY_MODIFY:
         pr_info("[tvm-driver] RTVM_IOC_CVM_PHYS_MEMORY_MODIFY, base_address=0x%lx\n", count);
