@@ -1,14 +1,14 @@
 #!/bin/bash
-# Zion Enclave QEMU + GDB 调试模式
+# Zion Enclave QEMU + GDB debug mode
 #
-# 用法:
-#   ./run_qemu_debug.sh              # QEMU 等待 GDB 连接 (端口 1234)
-#   ./run_qemu_debug.sh gdb          # 同时启动 QEMU + GDB 自动连接
+# Usage:
+#   ./run_qemu_debug.sh              # QEMU waits for GDB (port 1234)
+#   ./run_qemu_debug.sh gdb          # Start QEMU and automatically connect GDB
 #
-# 流程:
-#   1. QEMU 启动后暂停在第一条指令 (-S)
-#   2. GDB 连接后 continue 即可运行
-#   3. 可在 SM 或 enclave 代码中设断点
+# Workflow:
+#   1. QEMU pauses at the first instruction (-S)
+#   2. Connect GDB and use continue to run
+#   3. Set breakpoints in SM or enclave code
 
 set -e
 
@@ -19,7 +19,7 @@ source "$ZION_DIR/scripts/zion_paths.sh"
 CROSS_COMPILE="$(zion_resolve_cross_compile)"
 GDB="${GDB:-${CROSS_COMPILE}gdb}"
 
-# ---- 路径 ----
+# ---- Paths ----
 SM_FW="${SM_FW:-$BUILD_DIR/opensbi/platform/generic/firmware/fw_dynamic.bin}"
 KERNEL="$(zion_resolve_native_kernel "$ZION_DIR" "$BUILD_DIR")"
 OLD_ROOTFS="$(zion_resolve_zion_base_rootfs "$ZION_DIR" "$BUILD_DIR")"
@@ -28,7 +28,7 @@ TEST_BIN="$BUILD_DIR/test_zion_ioctl"
 NEW_ROOTFS="$BUILD_DIR/zion_rootfs_9p.cpio"
 SHARED_DIR="$BUILD_DIR/shared"
 
-# OpenSBI ELF (带符号表, 用于 GDB 调试 SM)
+# OpenSBI ELF (with symbols for debugging SM in GDB)
 SM_ELF="$BUILD_DIR/opensbi/platform/generic/firmware/fw_dynamic.elf"
 # Eyrie runtime ELF
 EYRIE_ELF="$BUILD_DIR/eyrie/eyrie-rt"
@@ -36,7 +36,7 @@ EYRIE_ELF="$BUILD_DIR/eyrie/eyrie-rt"
 MODE="${1:-standalone}"
 GDB_PORT="${GDB_PORT:-1234}"
 
-# 颜色
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -45,17 +45,17 @@ NC='\033[0m'
 info() { echo -e "${YELLOW}[DBG]${NC} $1"; }
 ok()   { echo -e "${GREEN}[OK]${NC} $1"; }
 
-# ---- 检查 ----
-info "检查文件..."
+# ---- Checks ----
+info "Checking files..."
 for f in "$SM_FW" "$KERNEL" "$OLD_ROOTFS" "$DRIVER"; do
-    [ -f "$f" ] || { echo -e "${RED}[FAIL]${NC} 缺少: $f"; exit 1; }
-    echo "  ✓ $(basename $f)"
+    [ -f "$f" ] || { echo -e "${RED}[FAIL]${NC} Missing: $f"; exit 1; }
+    echo "  [OK] $(basename $f)"
 done
 
-[ -f "$SM_ELF" ] && ok "SM ELF: $SM_ELF" || info "SM ELF 不存在 (无符号调试)"
-[ -f "$EYRIE_ELF" ] && ok "Eyrie ELF: $EYRIE_ELF" || info "Eyrie ELF 不存在"
+[ -f "$SM_ELF" ] && ok "SM ELF: $SM_ELF" || info "SM ELF unavailable (debugging without symbols)"
+[ -f "$EYRIE_ELF" ] && ok "Eyrie ELF: $EYRIE_ELF" || info "Eyrie ELF unavailable"
 
-# ---- 准备9p共享目录 ----
+# ---- Prepare the 9p shared directory ----
 mkdir -p "$SHARED_DIR"
 cp "$DRIVER" "$SHARED_DIR/" 2>/dev/null
 cp "$TEST_BIN" "$SHARED_DIR/" 2>/dev/null
@@ -67,9 +67,9 @@ for f in test-stack test-loop test-fibonacci test-malloc test-fib-bench test-run
     [ -f "$BUILD_DIR/shared/$f" ] && cp "$BUILD_DIR/shared/$f" "$SHARED_DIR/" 2>/dev/null
 done
 
-# ---- 打包rootfs (与主脚本共用) ----
+# ---- Package rootfs (shared with the main script) ----
 if [ ! -f "$NEW_ROOTFS" ] || [ "$OLD_ROOTFS" -nt "$NEW_ROOTFS" ]; then
-    info "打包rootfs..."
+    info "Packaging rootfs..."
     TMPROOT=$(mktemp -d)
     cd "$TMPROOT"
     cpio -idm < "$OLD_ROOTFS" 2>/dev/null
@@ -116,16 +116,16 @@ INITEOF
     rm -rf "$TMPROOT"
 fi
 
-# ---- GDB 启动脚本 ----
+# ---- GDB startup script ----
 GDB_SCRIPT="/tmp/gdb_zion_cmds"
 cat > "$GDB_SCRIPT" << GDBEOF
 set pagination off
 set confirm off
 
-# 连接 QEMU
+# Connect to QEMU
 target remote :$GDB_PORT
 
-# 加载 SM 符号 (如果有)
+# Load SM symbols if available
 GDBEOF
 
 if [ -f "$SM_ELF" ]; then
@@ -140,7 +140,7 @@ fi
 
 cat >> "$GDB_SCRIPT" << 'GDBEOF'
 
-# 常用断点 (注释掉不需要的)
+# Common breakpoints (comment out unwanted entries)
 # break enclave_trap_handler
 # break stop_enclave
 # break run_enclave
@@ -159,7 +159,7 @@ echo   break tee_dispatch_trap\n
 echo \n
 GDBEOF
 
-# ---- QEMU 参数 ----
+# ---- QEMU arguments ----
 QEMU="$(zion_resolve_outer_qemu "$ZION_DIR")"
 QEMU_ARGS=(
     -machine virt -cpu rv64,sstc=false
@@ -176,20 +176,20 @@ QEMU_ARGS=(
 )
 
 echo ""
-info "启动 QEMU (调试模式) ..."
+info "Starting QEMU (debug mode)..."
 echo "  SM:      $SM_FW"
 echo "  Kernel:  $KERNEL"
 echo "  GDB:     localhost:$GDB_PORT"
 echo ""
 echo -e "${CYAN}=========================================${NC}"
-echo -e "${CYAN}  QEMU 已暂停, 等待 GDB 连接${NC}"
+echo -e "${CYAN}  QEMU is paused, waiting for GDB${NC}"
 echo -e "${CYAN}=========================================${NC}"
 echo ""
-echo "  在另一个终端运行:"
+echo "  Run in another terminal:"
 echo ""
 echo -e "    ${GREEN}$GDB -x $GDB_SCRIPT${NC}"
 echo ""
-echo "  或直接:"
+echo "  Or directly:"
 echo ""
 echo -e "    ${GREEN}$GDB${NC}"
 echo "    (gdb) target remote :$GDB_PORT"
@@ -201,20 +201,20 @@ echo ""
 
 if [ "$MODE" = "gdb" ]; then
 	command -v "$GDB" >/dev/null 2>&1 || {
-		echo -e "${RED}[FAIL]${NC} 缺少 GDB: $GDB"
+		echo -e "${RED}[FAIL]${NC} Missing GDB: $GDB"
 		exit 1
 	}
-    # 后台启动 QEMU, 前台启动 GDB
+    # Start QEMU in the background and GDB in the foreground
     "$QEMU" "${QEMU_ARGS[@]}" &
     QEMU_PID=$!
     sleep 1
 
     "$GDB" -x "$GDB_SCRIPT"
 
-    # GDB 退出后杀 QEMU
+    # Stop QEMU when GDB exits
     kill $QEMU_PID 2>/dev/null; wait $QEMU_PID 2>/dev/null
-    echo -e "${GREEN}[完成]${NC} 调试结束"
+    echo -e "${GREEN}[DONE]${NC} Debugging finished"
 else
-    # 只启动 QEMU, 用户手动连 GDB
+    # Start only QEMU; connect GDB manually
     exec "$QEMU" "${QEMU_ARGS[@]}"
 fi

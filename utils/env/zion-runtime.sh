@@ -9,16 +9,16 @@ if [ "$mode" = select ]; then
     guest=${2:-}
     if [ -z "$guest" ]; then
         printf '%s\n' \
-            '选择 Zion Guest 系统：' \
-            '  1. Linux（SSH、virtio-net/blk、SQLite、enclave）' \
-            '  2. Asterinas（SSH、virtio-net/blk、SQLite；enclave 不支持）'
-        printf '请输入 1 或 2: '
+            'Select the Zion guest system:' \
+            '  1. Linux (SSH, virtio-net/blk, SQLite, enclave)' \
+            '  2. Asterinas (SSH, virtio-net/blk, SQLite; enclave unsupported)'
+        printf 'Enter 1 or 2: '
         read -r guest
     fi
     case "$guest" in
         1|linux) guest=linux ;;
         2|asterinas) guest=asterinas ;;
-        *) echo '无效选择，只接受 1/linux 或 2/asterinas。' >&2; exit 2 ;;
+        *) echo 'Invalid selection: use 1/linux or 2/asterinas.' >&2; exit 2 ;;
     esac
     printf '%s\n' "$guest" > state/guest-system
     echo "Selected Guest system: $guest"
@@ -27,7 +27,7 @@ fi
 
 if [ "$mode" = guest ]; then
     [ -f state/guest-system ] || {
-        echo '尚未选择 Guest；先运行 sh ./zion-runtime.sh select' >&2
+        echo 'No guest selected; run sh ./zion-runtime.sh select first.' >&2
         exit 2
     }
     read -r mode < state/guest-system

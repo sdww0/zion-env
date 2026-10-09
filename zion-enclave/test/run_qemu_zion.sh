@@ -1,10 +1,10 @@
 #!/bin/bash
-# Zion Enclave QEMU Boot & Test (9p shared folder版)
+# Zion Enclave QEMU Boot & Test (9p shared folder)
 # This is the canonical native-enclave QEMU entry point.
 #
-# 用法:
-#   ./run_qemu_zion.sh           # 自动测试模式
-#   ./run_qemu_zion.sh manual    # 手动模式(进入shell)
+# Usage:
+#   ./run_qemu_zion.sh           # Automatic test mode
+#   ./run_qemu_zion.sh manual    # Manual mode (enter the shell)
 
 set -e
 
@@ -13,14 +13,14 @@ ZION_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="${BUILD_DIR:-$ZION_DIR/build}"
 source "$ZION_DIR/scripts/zion_paths.sh"
 
-# ---- 路径 ----
+# ---- Paths ----
 SM_FW="${SM_FW:-$BUILD_DIR/opensbi/platform/generic/firmware/fw_dynamic.bin}"
 KERNEL="$(zion_resolve_native_kernel "$ZION_DIR" "$BUILD_DIR")"
 OLD_ROOTFS="$(zion_resolve_zion_base_rootfs "$ZION_DIR" "$BUILD_DIR")"
 DRIVER="$(zion_resolve_native_driver "$ZION_DIR" "$BUILD_DIR")"
 DRIVER_BUILD_MANIFEST="${ZION_DRIVER_MANIFEST:-$DRIVER.manifest}"
 NEW_ROOTFS="$BUILD_DIR/zion_rootfs_9p.cpio"
-SHARED_DIR="$BUILD_DIR/shared"    # 9p共享目录
+SHARED_DIR="$BUILD_DIR/shared"    # 9p shared directory
 EYRIE_RT="$BUILD_DIR/eyrie/eyrie-rt"
 EYRIE_LINUX_RT="$BUILD_DIR/eyrie-linux-test/output/eyrie-rt"
 EYRIE_IO_RT="$BUILD_DIR/eyrie-io-test/output/eyrie-rt"
@@ -45,7 +45,7 @@ LOG_VERIFIER="$ZION_DIR/scripts/verify_runtime_log.sh"
 
 MODE="${1:-auto}"
 
-# 颜色
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -55,11 +55,11 @@ fail() { echo -e "${RED}[FAIL]${NC} $1"; exit 1; }
 
 case "$MODE" in
     auto|manual) ;;
-    *) fail "未知模式: $MODE（使用 auto 或 manual）" ;;
+    *) fail "Unknown mode: $MODE (use auto or manual)" ;;
 esac
 
-# ---- 检查 ----
-info "检查文件..."
+# ---- Checks ----
+info "Checking files..."
 for f in "$SM_FW" "$KERNEL" "$OLD_ROOTFS" "$DRIVER" \
          "$DRIVER_BUILD_MANIFEST" "$EYRIE_RT" \
          "$EYRIE_LINUX_RT" \
@@ -70,22 +70,22 @@ for f in "$SM_FW" "$KERNEL" "$OLD_ROOTFS" "$DRIVER" \
          "$LINUX_ABI_BIN" \
          "$IO_VECTOR_BIN" "$IO_FILE_BIN" "$IO_MULTIPLEX_BIN" \
          "$NET_LOOPBACK_BIN" "$NET_PSELECT_BIN"; do
-    [ -f "$f" ] || fail "缺少: $f"
-    echo "  ✓ $(basename $f) ($(du -h "$f" | cut -f1))"
+    [ -f "$f" ] || fail "Missing: $f"
+    echo "  [OK] $(basename $f) ($(du -h "$f" | cut -f1))"
 done
-[ -f "$NATIVE_HANDLE_TEST" ] || fail "缺少: $NATIVE_HANDLE_TEST"
+[ -f "$NATIVE_HANDLE_TEST" ] || fail "Missing: $NATIVE_HANDLE_TEST"
 CROSS_COMPILE="$(zion_resolve_cross_compile)"
 command -v "${CROSS_COMPILE}gcc" >/dev/null ||
-    fail "缺少: ${CROSS_COMPILE}gcc"
+    fail "Missing: ${CROSS_COMPILE}gcc"
 "${CROSS_COMPILE}gcc" -static -O2 -Wall -Wextra -Werror \
     "$SCRIPT_DIR/zion-driver-security.c" -o "$DRIVER_SECURITY_TEST"
 
-# ---- 准备9p共享目录 ----
+# ---- Prepare the 9p shared directory ----
 mkdir -p "$SHARED_DIR"
 cp "$DRIVER" "$SHARED_DIR/"
 cp "$DRIVER_BUILD_MANIFEST" "$SHARED_DIR/zion-driver.ko.build-manifest"
 
-# 同步本轮实际执行的运行时、loader、runner 和测试程序。
+# Sync the runtime, loader, runner, and tests used by this run.
 cp "$EYRIE_RT" "$SHARED_DIR/eyrie-rt"
 cp "$EYRIE_LINUX_RT" "$SHARED_DIR/eyrie-linux-test"
 cp "$EYRIE_IO_RT" "$SHARED_DIR/eyrie-io-test"
@@ -100,16 +100,16 @@ cp "$NET_LOOPBACK_BIN" "$SHARED_DIR/"
 cp "$NATIVE_HANDLE_TEST" "$SHARED_DIR/"
 cp "$DRIVER_SECURITY_TEST" "$SHARED_DIR/"
 for test_bin in test-stack test-loop test-fibonacci test-malloc; do
-    [ -x "$BUILD_DIR/examples/$test_bin" ] || fail "缺少: $BUILD_DIR/examples/$test_bin"
+    [ -x "$BUILD_DIR/examples/$test_bin" ] || fail "Missing: $BUILD_DIR/examples/$test_bin"
     cp "$BUILD_DIR/examples/$test_bin" "$SHARED_DIR/"
 done
 
-info "9p共享目录: $SHARED_DIR"
+info "9p shared directory: $SHARED_DIR"
 
-# ---- 打包rootfs (只需一次, 不含驱动/测试) ----
+# ---- Package rootfs (once, without driver/tests) ----
 if [ ! -f "$NEW_ROOTFS" ] || [ "$OLD_ROOTFS" -nt "$NEW_ROOTFS" ] || \
    [ "$SCRIPT_DIR/run_qemu_zion.sh" -nt "$NEW_ROOTFS" ]; then
-    info "打包rootfs (带9p支持的init)..."
+    info "Packaging rootfs (init with 9p support)..."
     TMPROOT=$(mktemp -d)
     cd "$TMPROOT"
     cpio -idm < "$OLD_ROOTFS" 2>/dev/null
@@ -126,7 +126,7 @@ echo "  Zion Enclave Test (9p mode)"
 echo "========================================="
 echo ""
 
-# 挂载9p共享目录
+# Mount the 9p shared directory
 mkdir -p /mnt
 mount -t 9p -o trans=virtio,version=9p2000.L hostshare /mnt
 if [ $? -ne 0 ]; then
@@ -135,8 +135,8 @@ if [ $? -ne 0 ]; then
 fi
 echo "[OK] 9p shared folder mounted at /mnt"
 
-# 加载驱动
-echo "[OK] 加载 zion-driver.ko ..."
+# Load the driver
+echo "[OK] Loading zion-driver.ko..."
 if ! insmod /mnt/zion-driver.ko; then
     echo "[ZION-QEMU] FAIL: driver load"
     poweroff -f
@@ -146,7 +146,7 @@ if [ ! -e /dev/zion_enclave ]; then
     poweroff -f
 fi
 ls -la /dev/zion_enclave
-echo "[OK] 设备节点已创建"
+echo "[OK] Device node created"
 
 # The minimal initramfs does not run a network manager. Bring loopback up
 # explicitly so the NET producer regression has a deterministic local target.
@@ -173,7 +173,7 @@ if grep -qw auto /proc/cmdline 2>/dev/null; then
     }
 
     echo ""
-    echo "[TEST] 原生 Zion enclave 生命周期"
+    echo "[TEST] Native Zion enclave lifecycle"
     echo "-----------------------------------------"
     run_case hello /mnt/hello-runner /mnt/hello /mnt/eyrie-rt /mnt/loader.bin
     run_case test-stack /mnt/test-runner /mnt/test-stack /mnt/eyrie-rt \
@@ -220,15 +220,15 @@ if grep -qw auto /proc/cmdline 2>/dev/null; then
         echo "[ZION-QEMU] FAIL: $FAILURES native enclave test(s)"
     fi
     echo "========================================="
-    echo "  测试完成，关机"
+    echo "  Tests complete; shutting down"
     echo "========================================="
     poweroff -f
 fi
 
-# 手动模式
+# Manual mode
 echo ""
-echo "[manual] 驱动已加载，进入shell"
-echo "[manual] 用完后 poweroff -f 退出"
+echo "[manual] Driver loaded; entering the shell"
+echo "[manual] Run poweroff -f to exit"
 echo ""
 exec sh
 INITEOF
@@ -240,21 +240,21 @@ INITEOF
     rm -rf "$TMPROOT"
     info "rootfs: $NEW_ROOTFS ($(du -h "$NEW_ROOTFS" | cut -f1))"
 else
-    info "rootfs已存在, 跳过打包"
+    info "rootfs already exists; skipping packaging"
 fi
 
 # ---- QEMU ----
 QEMU="$(zion_resolve_outer_qemu "$ZION_DIR")"
 
 echo ""
-info "启动 QEMU ..."
+info "Starting QEMU..."
 echo "  SM:      $SM_FW"
 echo "  Kernel:  $KERNEL"
-echo "  9p:      $SHARED_DIR → /mnt"
+echo "  9p:      $SHARED_DIR -> /mnt"
 echo ""
 
 if [ "$MODE" = "manual" ]; then
-    # 手动模式：加载驱动后进入shell
+    # Manual mode: enter the shell after loading the driver.
     exec "$QEMU" \
         -machine virt -cpu rv64,sstc=false \
         -m 8G -smp 2 \
@@ -266,10 +266,10 @@ if [ "$MODE" = "manual" ]; then
         -device virtio-9p-device,fsdev=shared,mount_tag=hostshare \
         -nographic -no-reboot
 else
-    # 自动模式：保留串口直连，同时让超时或 QEMU 失败传播给调用者。
+    # Automatic mode: retain the serial connection and propagate timeouts or QEMU failures.
     ARTIFACT_MANIFEST="${ZION_ARTIFACT_MANIFEST:-$QEMU_LOG.artifacts.sha256}"
-    command -v sha256sum >/dev/null || fail "缺少 sha256sum"
-    [ -x "$LOG_VERIFIER" ] || fail "缺少运行日志验证器: $LOG_VERIFIER"
+    command -v sha256sum >/dev/null || fail "Missing sha256sum"
+    [ -x "$LOG_VERIFIER" ] || fail "Missing runtime log verifier: $LOG_VERIFIER"
 	sha256sum "$QEMU" "$SM_FW" "$KERNEL" "$NEW_ROOTFS" \
 	        "$SHARED_DIR/zion-driver.ko" \
 	        "$SHARED_DIR/zion-driver.ko.build-manifest" \
@@ -306,9 +306,9 @@ else
     QEMU_RC=${PIPESTATUS[0]}
     set -e
 
-    [ "$QEMU_RC" -eq 0 ] || fail "QEMU测试失败或超时 (exit=$QEMU_RC)"
+    [ "$QEMU_RC" -eq 0 ] || fail "QEMU test failed or timed out (exit=$QEMU_RC)"
     "$LOG_VERIFIER" native "$QEMU_LOG" "$ARTIFACT_MANIFEST"
 
     echo ""
-    echo -e "${GREEN}[完成]${NC} QEMU测试通过（日志: $QEMU_LOG）"
+    echo -e "${GREEN}[DONE]${NC} QEMU test passed (log: $QEMU_LOG)"
 fi
