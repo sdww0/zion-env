@@ -55,6 +55,7 @@ podman run --rm --platform linux/amd64 --volume "$ROOT:/root" \
 test -s "$BUILD/sign/bootloader_secboot_ddr5.bin"
 install -m 644 "$BUILD/sign/bootloader_secboot_ddr5.bin" \
     "$BUILD/firmware/bootloader_secboot_ddr5_milkv_megrez.bin"
-install -m 644 "$ROOT/utils/env/megrez-deploy-test-zh.md" "$BUILD/firmware/MEGREZ_DEPLOY_TEST_ZH.md"
+install -m 644 "$ROOT/utils/env/megrez-deploy-test.md" "$BUILD/firmware/MEGREZ_DEPLOY_TEST.md"
+install -m 644 "$ROOT/utils/env/megrez-deploy-test-zh.md" "$BUILD/firmware/MEGREZ_DEPLOY_TEST-zh.md"
 echo "Megrez firmware built: $BUILD/firmware/bootloader_secboot_ddr5_milkv_megrez.bin"
 echo 'Build/sign success is not physical-board boot validation.'

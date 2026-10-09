@@ -228,6 +228,10 @@ override board correctness.
 
 ## Style
 
+Keep each documentation file in one language. English is the default; Chinese
+translations use a separate `-zh.md` file. Keep packaged document names and
+links consistent with this convention.
+
 Follow the existing OpenSBI/Zion style.
 
 - Respect `opensbi/.clang-format`
@@ -249,6 +253,12 @@ For most Zion TEE tasks, this order works well:
    component boundaries
 
 ## Dirty Tree Guidance
+
+Use `bash ./utils/clean-cache.sh` to preview cache cleanup and add `--apply` to
+execute it. Preserve downloaded toolchains, runtime images, releases and logs.
+Use `bash ./utils/build-megrez-release.sh VALIDATED_RUNTIME_RELEASE UBOOT_BASE_RELEASE`
+to rebuild/sign OpenSBI and package the already validated runtime in one step.
+This does not rebuild Linux or Asterinas and does not prove board boot success.
 
 This repository may contain local edits, generated outputs, large images, and
 logs.

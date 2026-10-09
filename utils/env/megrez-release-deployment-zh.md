@@ -118,6 +118,6 @@ ls /dev/tvm
 sh ./zion-runtime.sh select
 ```
 
-然后按[测试手册](TESTS_ZH.md)操作。Linux 与 Asterinas Guest 用户/密码均为
+然后按[测试手册](TESTS-zh.md)操作。Linux 与 Asterinas Guest 用户/密码均为
 `root / debian`，SSH 转发只绑定 Host `127.0.0.1:10022`。enclave 测试只支持
 Linux Guest。

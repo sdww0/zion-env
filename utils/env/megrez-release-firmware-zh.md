@@ -12,10 +12,10 @@ Host 沿用系统默认安装的 DTB，无需复制或替换设备树。
 
 操作手册：
 
-- [SD 卡导入与初始化](../docs/DEPLOYMENT_ZH.md)
-- [测试项目及预期输出](../docs/TESTS_ZH.md)
-- [测试输出与通过依据](../docs/EVIDENCE_ZH.md)
-- [整体发布包说明](../README.md)
+- [SD 卡导入与初始化](../docs/DEPLOYMENT-zh.md)
+- [测试项目及预期输出](../docs/TESTS-zh.md)
+- [测试输出与通过依据](../docs/EVIDENCE-zh.md)
+- [整体发布包说明](../README-zh.md)
 
 保留已能启动的旧固件，检查 SD 卡设备和分区后再覆盖。不要直接照抄旧
 脚本中写死的 `/dev/sdb` 或 `/dev/sdc`。本包不自动格式化、分区或刷写板载

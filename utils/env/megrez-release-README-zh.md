@@ -1,14 +1,16 @@
 # Zion Milk-V Megrez 整体发布包
 
+[英文版](README.md)
+
 适用：已安装可启动 RockOS 的 Milk-V Megrez。Guest 登录：`root / debian`。
 
 ## 说明书
 
-- [一次启动测试流程](QUICK_TEST_ZH.md)：从刚重启的 Host 开始，按命令顺序完成全部测试。
-- [部署手册](docs/DEPLOYMENT_ZH.md)：SD 卡导入、备份及 Host 初始化。
-- [测试手册](docs/TESTS_ZH.md)：测试操作、预期输出、判定条件和日志位置。
-- [输出与通过依据](docs/EVIDENCE_ZH.md)：输出来源、对应检查和证据范围。
-- [固件说明](boot-partition/MEGREZ_DEPLOY_TEST_ZH.md)：固件位置与更新边界。
+- [一次启动测试流程](QUICK_TEST-zh.md)：从刚重启的 Host 开始，按命令顺序完成全部测试。
+- [部署手册](docs/DEPLOYMENT-zh.md)：SD 卡导入、备份及 Host 初始化。
+- [测试手册](docs/TESTS-zh.md)：测试操作、预期输出、判定条件和日志位置。
+- [输出与通过依据](docs/EVIDENCE-zh.md)：输出来源、对应检查和证据范围。
+- [固件说明](boot-partition/MEGREZ_DEPLOY_TEST-zh.md)：固件位置与更新边界。
 
 ## 配套组件
 
@@ -17,11 +19,11 @@
 | `boot-partition/` | 含 Zion 的 Megrez bootloader（OpenSBI + U-Boot）、Host kernel、Host initramfs |
 | `root-partition/root/zion-tests/` | Linux/Asterinas kernel、配套 initramfs、Zion QEMU、TVM 驱动及控制程序、统一启动脚本和配置 |
 | `identity/` | 与固件对应的测试设备公钥 |
+| `SHA256SUMS` | 包内所有文件的完整性校验 |
 
 在插卡主机上可运行 `sudo ./install-to-device.sh`，默认部署到 `/dev/sdb`；
 也可将目标整盘设备作为参数，例如 `sudo ./install-to-device.sh /dev/sdc`。
 脚本覆盖 boot 文件，并只替换 rootfs 中的 `/root/zion-tests`。
-| `SHA256SUMS` | 包内所有文件的完整性校验 |
 
 `initrd-linux.img` 包含 SSH、enclave module/runtime/测试程序和 SQLite。
 `initrd-asterinas.img` 包含 SSH 和 SQLite。Linux 与 Asterinas 都支持
@@ -65,7 +67,7 @@ sh ./zion-runtime.sh select
 `bootloader.bin` 到 SD 卡不等于已经刷入板载固件。若已使用对应新版固件，
 无需为更新 Guest 或 Host 测试脚本而重复刷 bootloader。
 
-测试范围和输出含义见[输出与通过依据](docs/EVIDENCE_ZH.md)。
+测试范围和输出含义见[输出与通过依据](docs/EVIDENCE-zh.md)。
 
 在源项目重新组装完整发布包时，可指定已验证运行包作为 binary 输入：
 

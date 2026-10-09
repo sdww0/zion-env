@@ -112,4 +112,4 @@ sh ./zion-runtime.sh stop
 ```
 
 Guest 启动日志保存在 `/root/zion-tests/state/`。输出含义和失败排查见
-`docs/TESTS_ZH.md` 与 `docs/EVIDENCE_ZH.md`。
+`docs/TESTS-zh.md` 与 `docs/EVIDENCE-zh.md`。

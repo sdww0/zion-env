@@ -1,7 +1,7 @@
 # Zion 测试手册
 
-前置步骤：[部署与 Host 初始化](DEPLOYMENT_ZH.md)。默认 Guest 512 MiB、
-1 vCPU，SSH 转发端口 10022。输出解释见[输出与通过依据](EVIDENCE_ZH.md)。
+前置步骤：[部署与 Host 初始化](DEPLOYMENT-zh.md)。默认 Guest 512 MiB、
+1 vCPU，SSH 转发端口 10022。输出解释见[输出与通过依据](EVIDENCE-zh.md)。
 
 ## 0. Host 脚本初始化
 
