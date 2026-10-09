@@ -1,6 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
+if [[ ${1:-} == --help ]]; then
+    echo "Usage: MEGREZ_RUNTIME_INPUT=VALIDATED_RELEASE bash $0 [NEW_RELEASE_DIRECTORY]"
+    echo 'Optional overrides: MEGREZ_FIRMWARE_BUILD, MEGREZ_HOST_KERNEL, MEGREZ_ASTER_KERNEL,'
+    echo 'MEGREZ_LINUX_INITRD, MEGREZ_ASTER_INITRD, MEGREZ_TVM_DRIVER, MEGREZ_TVM_CONTROL'
+    exit 0
+fi
 INPUT=${MEGREZ_RUNTIME_INPUT:-}
 if [[ -n "$INPUT" ]]; then
     INPUT=$(cd "$INPUT" && pwd)
@@ -82,6 +88,7 @@ install -m 755 "$TVM_CONTROL" "$RUNTIME/tvm-control"
 install -m 755 "$QEMU" "$RUNTIME/qemu-system-riscv64"
 install -m 755 "$ROOT/utils/env/zion-runtime.sh" "$RUNTIME/"
 install -m 644 "$ROOT/utils/env/megrez-runtime.conf" "$RUNTIME/"
+install -m 644 "$ROOT/utils/env/megrez-release-quick-test-zh.md" "$RUNTIME/QUICK_TEST_ZH.md"
 install -m 644 "$PUBLIC_KEY" "$DEST/identity/zion-test-device-public-key.bin"
 install -m 644 "$ROOT/utils/env/megrez-release-README-zh.md" "$DEST/README.md"
 install -m 644 "$ROOT/utils/env/megrez-release-quick-test-zh.md" "$DEST/QUICK_TEST_ZH.md"
