@@ -10,11 +10,22 @@
 
 set -e
 
+ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
+cd "$ROOT_DIR/virt"
+if [[ ${1:-} == --help ]]; then
+    echo "Usage: bash $0 [pass-compile]"
+    exit 0
+fi
+if [[ $# -gt 1 || ( $# -eq 1 && $1 != pass-compile ) ]]; then
+    echo 'Expected pass-compile or no argument.' >&2
+    exit 2
+fi
+
 PASS_COMPILE=false
 ZION_CVM_SSH_PORT="${ZION_CVM_SSH_PORT:-10022}"
 ZION_OUTER_SSH_PORT="${ZION_OUTER_SSH_PORT:-10023}"
 
-if [ "$1" == "pass-compile" ]; then
+if [ "${1:-}" == "pass-compile" ]; then
     PASS_COMPILE=true
 fi
 
@@ -24,23 +35,19 @@ if [ "$PASS_COMPILE" = false ] ; then
 
     source utils/common.sh
 
-    set +e
-
     ZION_TESTS_DIR=./rootfs_ext4/root/zion-tests
     mkdir -p rootfs_ext4
     sudo mount -o loop ./virt/rootfs.ext4 rootfs_ext4
+    trap 'sudo umount "$ROOT_DIR/rootfs_ext4"' EXIT
     sudo mkdir -p $ZION_TESTS_DIR
 
     # Load guest kernel and initrd to rootfs
     if [[ " ${BUILD_OPTIONS[@]} " =~ " GUEST_KERNEL " ]]; then
-        sudo rm $ZION_TESTS_DIR/guest_kernel_image
         sudo cp $OUTPUT_DIR/guest_kernel_image $ZION_TESTS_DIR/guest_kernel_image
     fi
 
     # Load tvm-driver to rootfs
     if [[ " ${BUILD_OPTIONS[@]} " =~ " TVM_DRIVER " ]]; then
-        sudo rm $ZION_TESTS_DIR/tvm-control
-        sudo rm $ZION_TESTS_DIR/tvm-driver.ko
         sudo cp $OUTPUT_DIR/tvm-driver/tvm-driver.ko $ZION_TESTS_DIR/tvm-driver.ko
         sudo cp $OUTPUT_DIR/tvm-driver/tvm-control $ZION_TESTS_DIR/tvm-control
     fi
@@ -57,18 +64,27 @@ if [ "$PASS_COMPILE" = false ] ; then
     sudo cp ./utils/env/initrd.img $ZION_TESTS_DIR/initrd.img
     sudo cp ./utils/env/start_tvm_ssh_from_boot.sh $ZION_TESTS_DIR/start_tvm_ssh_from_boot.sh
     sudo cp ./utils/env/tee-ssh.sh $ZION_TESTS_DIR/tee-ssh.sh
+    sudo cp ./utils/env/start_tvm_asterinas_from_boot.sh $ZION_TESTS_DIR/start_tvm_asterinas_from_boot.sh
+    sudo cp ./utils/env/tee-asterinas.sh $ZION_TESTS_DIR/tee-asterinas.sh
     if [ -f ./utils/env/initrd-ssh.img ]; then
         sudo cp ./utils/env/initrd-ssh.img $ZION_TESTS_DIR/initrd-ssh.img
     fi
+    ASTER_TEST_DIR=./patch/zion-test-scripts/zion-tests/asterinas-test
+    for artifact in asterinas_kernel asterinas_initramfs.cpio.gz; do
+        if [ -f "$ASTER_TEST_DIR/$artifact" ]; then
+            sudo cp "$ASTER_TEST_DIR/$artifact" "$ZION_TESTS_DIR/$artifact"
+        fi
+    done
 
     # umount
     sync
     sudo umount rootfs_ext4
-    rm -r rootfs_ext4
+    trap - EXIT
+    rmdir rootfs_ext4
     popd
 fi
 
-qemu-system-riscv64 -smp 1 -m 4G \
+qemu-system-riscv64 -smp 4 -m 4G \
     -nographic \
     -machine virt \
     -cpu rv64,pmp=true,pmp-granularity=4096,sv48=true,svpbmt=true,sstc=false \
