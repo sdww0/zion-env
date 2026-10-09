@@ -84,6 +84,9 @@ fi
 if [ ! -s /etc/dropbear/dropbear_ecdsa_host_key ]; then
 	/usr/bin/dropbearkey -t ecdsa -f /etc/dropbear/dropbear_ecdsa_host_key
 fi
+if [ ! -s /etc/dropbear/dropbear_ed25519_host_key ]; then
+	/usr/bin/dropbearkey -t ed25519 -f /etc/dropbear/dropbear_ed25519_host_key
+fi
 
 echo "Zion CVM SSH is starting on port 22."
 echo "Default login: root / debian"
@@ -94,7 +97,11 @@ echo "Virtio block device status:"
 ls -l /dev/vd* 2>/dev/null || true
 
 SSHD_ADDR="${SSHD_ADDR:-10.0.2.15}"
-/usr/sbin/dropbear -E -R -p "$SSHD_ADDR:22"
+/usr/sbin/dropbear -E -F \
+	-r /etc/dropbear/dropbear_rsa_host_key \
+	-r /etc/dropbear/dropbear_ecdsa_host_key \
+	-r /etc/dropbear/dropbear_ed25519_host_key \
+	-p "$SSHD_ADDR:22" &
 exec /bin/sh
 EOF
 chmod +x "$WORK_DIR/root/etc/zion-ssh.sh"
