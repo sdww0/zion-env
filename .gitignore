@@ -28,3 +28,12 @@ virt/rootfs.ext4
 init.sh
 *.patch
 zion-new/
+asterinas/
+__pycache__/
+*.pyc
+/aster-kernel-osdk-bin
+/.sqlite-speedtest1.from-container
+/screenlog.*
+/patch.zip
+/sdcard-*.img
+/virt/zion-tests/
