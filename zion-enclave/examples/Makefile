@@ -200,6 +200,17 @@ HELLO_RUNNER := $(BUILD_DIR)/hello-runner
 
 hello: $(HELLO_EAPP) $(HELLO_RUNNER)
 
+.PHONY: demo
+demo: $(BUILD_DIR)/demo $(BUILD_DIR)/demo-runner
+
+$(BUILD_DIR)/demo: $(EXAMPLES_DIR)/demo/demo.c $(EXAMPLES_DIR)/demo/demo-shared.h $(LIB_EAPP) | check-sdk
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(EAPP_CFLAGS) -nostdlib -Wl,--entry=_start -o $@ $< $(LIB_EAPP)
+
+$(BUILD_DIR)/demo-runner: $(EXAMPLES_DIR)/demo/demo-runner.cpp $(EXAMPLES_DIR)/demo/demo-shared.h $(LIB_HOST) $(LIB_EDGE) | check-sdk
+	@mkdir -p $(BUILD_DIR)
+	$(CXX) $(HOST_CFLAGS) $(HOST_LDFLAGS) -o $@ $< $(LIB_HOST) $(LIB_EDGE)
+
 $(HELLO_EAPP): $(HELLO_DIR)/eapp/hello.c $(LIB_EAPP) | check-sdk
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(EAPP_CFLAGS) -static -nostdlib -Wl,--entry=_start -o $@ $< $(LIB_EAPP)
@@ -228,7 +239,7 @@ host: $(HELLO_RUNNER) $(TEST_RUNNER) $(NATIVE_CRYPTO_RUNNER)
 # ====================================================================
 
 .PHONY: all
-all: hello tests host
+all: hello demo tests host
 
 # ====================================================================
 # Clean
@@ -236,7 +247,7 @@ all: hello tests host
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILD_DIR)/test-* $(BUILD_DIR)/hello* \
+	rm -rf $(BUILD_DIR)/test-* $(BUILD_DIR)/hello* $(BUILD_DIR)/demo* \
 	       $(BUILD_DIR)/native-crypto* $(BUILD_DIR)/linux-memory \
 	       $(BUILD_DIR)/linux-abi \
 	       $(BUILD_DIR)/io-vector $(BUILD_DIR)/io-file \
@@ -280,6 +291,7 @@ help:
 	@echo ""
 	@echo "  make all              - build hello + tests + host runners"
 	@echo "  make hello            - build hello example + runner"
+	@echo "  make demo             - build observable enclave example + runner"
 	@echo "  make tests            - build all test EAPPs"
 	@echo "  make host             - build host runners"
 	@echo ""

@@ -74,11 +74,14 @@ build_driver()
 
 build_examples()
 {
-	make -C "${SRC_DIR}/examples" hello \
+	make -C "${SRC_DIR}/examples" hello demo \
 		CROSS_COMPILE="${CROSS_COMPILE}" \
 		SDK_DIR="${SDK_INSTALL_DIR}" \
 		BUILD_DIR="${EXAMPLES_BUILD_DIR}" \
 		RUNTIME_DIR="${EYRIE_OUTPUT_DIR}"
+	"${CROSS_COMPILE}gcc" -Wall -Wextra -Werror -O2 -static \
+		"${SRC_DIR}/test/zion-driver-security.c" \
+		-o "${EXAMPLES_BUILD_DIR}/zion-driver-security"
 }
 
 package_initramfs()
@@ -95,7 +98,7 @@ package_initramfs()
 			exit 1
 		}
 	done
-	for file in hello hello-runner; do
+	for file in hello hello-runner demo demo-runner zion-driver-security; do
 		[ -f "${EXAMPLES_BUILD_DIR}/${file}" ] || {
 			echo "error: missing example artifact: ${file}" >&2
 			exit 1
@@ -123,6 +126,11 @@ package_initramfs()
 		"${EYRIE_OUTPUT_DIR}/loader.bin" "${enclave_dir}/"
 	install -m 0755 "${SRC_DIR}/test/run-nested-hello.sh" \
 		"${INITRAMFS_ROOT}/usr/bin/run-zion-enclave-test"
+	install -m 0755 "${EXAMPLES_BUILD_DIR}/demo" \
+		"${EXAMPLES_BUILD_DIR}/demo-runner" \
+		"${EXAMPLES_BUILD_DIR}/zion-driver-security" "${enclave_dir}/"
+	install -m 0755 "${SRC_DIR}/test/run-nested-demo.sh" \
+		"${INITRAMFS_ROOT}/usr/bin/run-zion-enclave-demo"
 	chmod 0755 "${INITRAMFS_ROOT}"
 	(
 		cd "${INITRAMFS_ROOT}"
